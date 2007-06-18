@@ -1,0 +1,78 @@
+<html>
+	<head>
+		<title>Quake2</title>
+		<script type="text/javascript" src="swfobject.js"></script>
+		<script type="text/javascript">
+			function showMapStats( msg )
+			{
+				var s = "<ul>";
+				for( var i = 0; i < msg.length; i++ )
+				{
+					s += "<li>" + msg[i] + "</li>";
+				}
+				s += "</ul>";
+				document.getElementById("map-stats").innerHTML = s;
+			}
+		</script>
+		<style type="text/css">
+			body {
+				margin: 0;
+				padding: 0;
+				background-color: #000000;
+				color: red;
+				font-family: "Trebuchet MS";
+				font-size: 9pt;
+			}
+			
+			a {
+				color: red;
+				font-size: 9pt;
+			}
+			
+			#content {
+				height: 100%;
+				width: 100%;
+			}
+			
+			#flashcontent {
+				width: 800px;
+				height: 600px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="content">
+			
+			<div style="float:right; margin-right:10px">
+				<a href="quake2_pv3d_prealpha.zip">get the source</a>
+				<p>
+					<div>controls:</div>
+					<ul>
+						<li>w: move forward</li>
+						<li>d: sidestep right</li>
+						<li>s: move backward</li>
+						<li>a: sidestep left</li>
+						<li>c: toggle clipping</li>
+						<li>mouse drag: rotate camera</li>
+						<li>1 to 8: select a map</li>
+					</ul>
+					
+					<div id="map-stats">
+						
+					</div>
+				</p>
+			</div>
+			
+			<div id="flashcontent">
+				This text is replaced by the Flash movie.
+			</div>
+			
+			<script type="text/javascript">
+			   var so = new SWFObject("App.swf", "App", "800", "600", "9", "#000000");
+			   so.write("flashcontent");
+			</script>
+			
+
+		</div>
+	</body>
+</html>
