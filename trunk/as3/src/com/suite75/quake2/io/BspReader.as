@@ -76,13 +76,19 @@ package com.suite75.quake2.io
 		public function BspReader( filename:String, paletteFile:String = "baseq/textures/POLY.PAL" )
 		{
 			this._filename = filename;
+			this._palFile = paletteFile;
 			
 			progressText = "";
-			
-			
-			loadPAL( paletteFile );
 		}
 
+		/**
+		 * 
+		 */
+		public function load():void
+		{
+			loadPAL( this._palFile );
+		}
+		
 		/**
 		 * 
 		 */
@@ -220,11 +226,12 @@ package com.suite75.quake2.io
 			if( _texturesToLoad.length )
 			{
 				var url:String = _texturesToLoad.pop() as String;
-				var wal:WALReader = new WALReader( url );
+				var wal:WALReader = new WALReader();
 				wal.addEventListener( FileLoadEvent.LOAD_COMPLETE, walCompleteHandler );
 				wal.addEventListener( FileLoadEvent.LOAD_ERROR, walErrorHandler );
+				wal.load( url );
 				
-				progressText = "loading texture #" + (this.textures.length-_texturesToLoad.length)+ " of " + this.textures.length;
+				Papervision3D.log("loading texture #" + (this.textures.length-_texturesToLoad.length)+ " of " + this.textures.length);
 				
 				dispatchEvent( new ProgressEvent(ProgressEvent.PROGRESS, false, false, this.textures.length-_texturesToLoad.length, this.textures.length) );
 			}
@@ -262,6 +269,8 @@ package com.suite75.quake2.io
 					bm.setPixel( i, j, col );
 				}
 			}
+			
+			//Papervision3D.log( "makeTexture " + w + "," + h );
 			
 			return bm;
 		}
@@ -735,6 +744,7 @@ package com.suite75.quake2.io
 		private var _texturesToLoad:Array;
 		private var _loader:URLLoader;
 		private var _filename:String;
+		private var _palFile:String;
 		private var _pal:PALReader;
 		private var _debug:Boolean = true;
 	}

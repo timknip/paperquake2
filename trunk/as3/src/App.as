@@ -45,6 +45,7 @@ package
 	import flash.text.TextFormat;
 	
 	import com.suite75.quake2.events.ClusterChangeEvent;
+	import com.suite75.papervision3d.cameras.FrustumCamera3D;
 	import com.suite75.papervision3d.objects.Quake2Bsp;
 	import com.suite75.papervision3d.scenes.ClipDisplayObject3D;
 
@@ -91,7 +92,7 @@ package
 			
 			// Create _scene
 			this._scene = new Scene3D( this._container );
-			
+		
 			_status = new TextField();
 			var tf:TextFormat = new TextFormat( "Arial", 10, 0xff0000 );
 			tf.size = 12;
@@ -107,9 +108,9 @@ package
 			_status.y = 20;
 			_status.text = "";
 					
-			var fps:FPSCounter = new FPSCounter();
-			addChild( fps );
-			fps.x = 5;
+		//	var fps:FPSCounter = new FPSCounter();
+		//	addChild( fps );
+		//	fps.x = 5;
 			
 			_crossHair = new Sprite();
 			addChild( _crossHair );
@@ -136,8 +137,7 @@ package
 			_startMouse = new Vertex3D();
 			
 			// Create _camera
-			this._camera = new FreeCamera3D();
-			
+			this._camera = new FrustumCamera3D();
 			//test();
 			
 			var bitmap:Bitmap = new cheClass() as Bitmap;
@@ -178,6 +178,9 @@ package
 		{
 			var perc:int = Math.round((event.bytesLoaded/event.bytesTotal) * 100);
 			
+			//if( this._map )
+			//	_status.text = this._map.reader.progressText;
+			//else
 			_status.text = "loading '" + _maps[_curMap] + "' " + perc + "% done";
 		}
 		
@@ -243,6 +246,9 @@ package
 		{
 			if( mapID == _curMap ) return;
 			
+			while( this._scene.container.numChildren )
+				this._scene.container.removeChildAt(0);
+				
 			if( _map )
 			{
 				stage.removeEventListener( Event.ENTER_FRAME, loop3D );
@@ -304,7 +310,7 @@ package
 			if( _editMode )
 			{
 				_camera.rotationX += dy;
-				_camera.rotationZ += dx;	
+				_camera.rotationZ -= dx;	
 				this._scene.renderCamera( _camera );
 			}
 			_startMouse = new Vertex3D( event.stageX, event.stageY );
@@ -360,7 +366,7 @@ package
 						break;
 						
 					case 83: // s
-						_camera.moveForward( 10 );
+						_camera.moveForward( 30 );
 						break;
 						
 					case 87: // w
@@ -426,6 +432,8 @@ package
 					break;
 				
 				case 67: // c
+					if( _map )
+						_map.enableLightmaps = !_map.enableLightmaps;
 					break;
 					
 				default:
@@ -436,7 +444,7 @@ package
 		
 		private var _mapObj:*;
 		private var _container:Sprite;		// papervision3D drawto sprite
-		private var _camera:FreeCamera3D;	// papervision3D camera
+		private var _camera:FrustumCamera3D;// papervision3D camera
 		private var _scene:Scene3D;			// papervision3D scene
 		private var _map:Quake2Bsp;			// the Q2 map as Mesh3D
 		private var _status:TextField;		// status

@@ -41,7 +41,16 @@ package com.suite75.quake2.io
 		public static const CONTENTS_WATER:uint			= 32;
 		public static const CONTENTS_MIST:uint 			= 64;
 		public static const LAST_VISIBLE_CONTENTS:uint 	= 64;
-		
+				
+		public static const SURF_LIGHT:uint		= 0x1;		// value will hold the light strength
+		public static const SURF_SLICK:uint		= 0x2;		// effects game physics
+		public static const SURF_SKY:uint		= 0x4;		// don't draw, but add to skybox
+		public static const SURF_WARP:uint		= 0x8;		// turbulent water warp
+		public static const SURF_TRANS33:uint	= 0x10;
+		public static const SURF_TRANS66:uint	= 0x20;
+		public static const SURF_FLOWING:uint	= 0x40;	// scroll towards angle
+		public static const SURF_NODRAW:uint 	= 0x80;	// don't bother referencing the texture
+
 		public var firstside:int;	// [int32]
 		public var numsides:int;	// [int32]
 		public var contents:int;	// [int32]

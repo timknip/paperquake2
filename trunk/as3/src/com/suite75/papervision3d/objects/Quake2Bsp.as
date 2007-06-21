@@ -27,8 +27,11 @@ package com.suite75.papervision3d.objects
 {
 	import flash.display.BitmapData;
 	import flash.events.*;
+	import flash.utils.ByteArray;
 	import flash.utils.Dictionary;
 	
+	import com.suite75.papervision3d.objects.ClipFace3D;
+	import com.suite75.papervision3d.objects.ClippedMesh;
 	import com.suite75.papervision3d.utils.Triangulate;
 	import com.suite75.quake2.events.ClusterChangeEvent;
 	import com.suite75.quake2.io.*;
@@ -47,10 +50,16 @@ package com.suite75.papervision3d.objects
 	 * 
 	 * <p></p>
 	 */
-	public class Quake2Bsp extends Mesh3D
+	public class Quake2Bsp extends ClippedMesh
 	{
+		public static const BLOCK_WIDTH:Number = 128;
+		public static const BLOCK_HEIGHT:Number = 128;
+		public static const LIGHTMAP_BYTES:uint = 4;
+		
 		public var filename:String;
 		public var paletteFile:String;
+		
+		public var materialsAdded:Boolean;
 		
 		/**
 		 * 
@@ -61,7 +70,8 @@ package com.suite75.papervision3d.objects
 			super( null, [], [] );
 			
 			this._scene = scene;
-						
+				
+			this.materialsAdded = false;
 			this.filename = filename;
 			this.paletteFile = paletteFile;
 			this._curCluster = -1;
@@ -70,9 +80,30 @@ package com.suite75.papervision3d.objects
 			this._reader.addEventListener( FileLoadEvent.LOAD_COMPLETE, readerCompleteHandler );
 			this._reader.addEventListener( FileLoadEvent.LOAD_ERROR, readerErrorHandler );
 			this._reader.addEventListener( ProgressEvent.PROGRESS, readerProgressHandler );
+			this._reader.load();
 		}
 		
 		public function get reader():BspReader { return _reader; }
+		
+		/**
+		 * 
+		 * @param	scene
+		 */
+		public override function render( scene:SceneObject3D ):void
+		{
+			if( !this.materialsAdded )
+			{
+				try
+				{
+					addMaterials();
+				}
+				catch( e:Error )
+				{
+					
+				}
+			}
+			super.render( scene );
+		}
 		
 		public function updatePosition( camera:CameraObject3D ):void 
 		{
@@ -302,6 +333,8 @@ package com.suite75.papervision3d.objects
 				
 				added[texinfo.texture] = texinfo.texture;
 			}
+			
+			this.materialsAdded = true;
 		}
 		
 		/**
@@ -377,7 +410,7 @@ package com.suite75.papervision3d.objects
 							uvs.push( uv );
 						}
 						
-						fixUV( f, uvs, wal.header.width, wal.header.height );
+						var lightmap:BitmapData = fixUV( f, uvs, texinfo );
 						
 						//Papervision3D.log( "====" );
 						//this.geometry.vertices = this.geometry.vertices.concat( points );
@@ -396,7 +429,10 @@ package com.suite75.papervision3d.objects
 							var uv1:NumberUV = uvs[triangles[m][1]];
 							var uv2:NumberUV = uvs[triangles[m][2]];
 							
-							var face:Face3D = new Face3D( [p0, p1, p2], texinfo.texture, [uv0, uv1, uv2] );
+							var face:ClipFace3D = new ClipFace3D( [p0, p1, p2], texinfo.texture, [uv0, uv1, uv2], this.viewport, lightmap );
+							
+							//Papervision3D.log( "material name: " + face.materialName );
+							//Papervision3D.log( "material name: " + face.materialName );
 							
 							this.geometry.faces.push( face );
 						}
@@ -416,7 +452,7 @@ package com.suite75.papervision3d.objects
 		 * @param	w
 		 * @param	h
 		 */
-		private function fixUV( face:BspFace, uvs:Array, w:uint, h:uint ):void
+		private function fixUV( face:BspFace, uvs:Array, texinfo:BspTexInfo ):BitmapData
 		{
 			face.min_s = face.max_s = uvs[0].u;
 			face.min_t = face.max_t = uvs[0].v;
@@ -442,7 +478,68 @@ package com.suite75.papervision3d.objects
 				
 				//Papervision3D.log( "uv:"+uvs[j] );
 			}
+			
+			// set the drawing flags
+			if( texinfo.flags & BspBrush.SURF_WARP )
+			{
+				Papervision3D.log( "SURF_WARP " + texinfo.flags );
+			}
+			
+			if( !(texinfo.flags & (BspBrush.SURF_SKY|BspBrush.SURF_TRANS33|BspBrush.SURF_TRANS66|BspBrush.SURF_WARP)) )
+			{
+			//	Papervision3D.log( "GL_CreateSurfaceLightmap " + texinfo.flags );
+			}
+			
+			if( !(texinfo.flags & BspBrush.SURF_WARP) )
+			{
+			//	Papervision3D.log( "GL_BuildPolygonFromSurface " + texinfo.flags );
+			}
+			
+			var smax:int = (face.size_s >> 4) + 1;
+			var tmax:int = (face.size_t >> 4) + 1;;
+			
+			var lm:BitmapData = buildLightMap( face, smax, tmax );
+			
+			return lm;
 			//Papervision3D.log( "f:" + face.min_s + ","+face.min_t+","+face.max_s+","+face.max_t+" "+face.size_s+" "+face.size_t );
+		}
+		
+		private function buildLightMap( surf:BspFace, smax:int, tmax:int ):BitmapData
+		{
+			var i:int, j:int;
+			var nummaps:uint = 0;
+			var maxsize:int = 34 * 34 * 3;
+			var size:int = smax * tmax;
+			var lump:BspLump = this.reader.header.lump[BspLump.LIGHTMAPS];
+			var data:ByteArray = this.reader.bspData;
+			var bitmap:BitmapData = new BitmapData( smax, tmax, true, 0xffffffff );
+			
+			data.position = lump.offset + surf.lightmap_offset;
+			
+			for( i = 0; i < 4 && surf.lightmap_styles[i] != 255; i++ )
+				nummaps++;
+
+			if( !nummaps )
+				return bitmap;
+				
+			if( size > maxsize )
+				throw new Error( "bad block size" );
+				
+			for( i = 0; i < tmax; i++ )
+			{
+				for( j = 0; j < smax; j++ )
+				{
+					var r:uint = data.readUnsignedByte();
+					var g:uint = data.readUnsignedByte();
+					var b:uint = data.readUnsignedByte();
+
+					var col:uint = (r<<16 | g<<8 | b);
+					
+					bitmap.setPixel( j, i, col );
+				}
+			}
+			
+			return bitmap;
 		}
 		
 		public function transformTex( vertices:Array, plane:BspPlane ):void
@@ -506,22 +603,23 @@ package com.suite75.papervision3d.objects
 		 * @param	event
 		 */
 		private function readerCompleteHandler(event:FileLoadEvent):void
-		{
-			addMaterials();
-			
+		{			
 			var ent:BspEntity = this._reader.entities.findEntityByClassName("info_player_start");
 			
 			var camPos:Vertex3D = new Vertex3D( ent.origin.x, ent.origin.y, ent.origin.z );
-			//camPos.z += 160;
 			
 			var vis:BspVisInfo = makeVisible( camPos  );
 			if( vis is BspVisInfo )
-			{
 				makeWorldFaces( vis );	
-			}
 		
-			//this.transformVertices(Matrix3D.scaleMatrix(-1,1,1));
+			try
+			{
+				addMaterials();
+			}
+			catch( e:Error )
+			{
 				
+			}
 			dispatchEvent( new Event(Event.COMPLETE) );
 		}
 
