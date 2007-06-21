@@ -56,19 +56,22 @@ package com.suite75.quake2.io.wal
 		/**
 		 * 
 		 */
-		public function WALReader( filename:String )
+		public function WALReader()
 		{
-			this._filename = filename;
-			
+						
+		}
+		
+		public function get filename():String { return _filename; }
+		
+		public function load( url:String ):void
+		{
+			this._filename = url;
 			this._loader = new URLLoader();
 			this._loader.dataFormat = URLLoaderDataFormat.BINARY;
 			this._loader.addEventListener( Event.COMPLETE, completeHandler );
 			this._loader.addEventListener( IOErrorEvent.IO_ERROR, errorHandler );
-			this._loader.load( new URLRequest( this._filename ) );		
-			
+			this._loader.load( new URLRequest( this._filename ) );	
 		}
-		
-		public function get filename():String { return _filename; }
 		
 		/**
 		 * 
